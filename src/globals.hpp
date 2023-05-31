@@ -23,6 +23,12 @@ namespace irods::http::globals
 
     auto set_connection_pool(irods::connection_pool& _cp) -> void;
     auto connection_pool() -> irods::connection_pool&;
+
+	auto set_oidc_endpoint_configuration(const nlohmann::json& _config) -> void;
+    auto oidc_endpoint_configuration() -> const nlohmann::json&;
+
+	auto set_oidc_configuration(const nlohmann::json& _config) -> void;
+    auto oidc_configuration() -> const nlohmann::json&;
 } // namespace irods::http::globals
 
 #endif // IRODS_HTTP_API_GLOBALS_HPP
