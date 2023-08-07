@@ -53,10 +53,6 @@ namespace irods::http::handler
 		net::ip::tcp::resolver tcp_res{io_ctx};
 		beast::tcp_stream tcp_stream{io_ctx};
 
-		//
-		// TODO: We shouldn't process a known url more than once...
-		//
-
 		// Setup curl
 		CURLU* endpoint{curl_url()};
 
@@ -178,6 +174,35 @@ namespace irods::http::handler
 		return encode_string(irods::http::globals::oidc_configuration()->at("redirect_uri").get_ref<const std::string&>());
 	}
 
+	auto decode_username_and_password()
+	{
+		constexpr auto basic_auth_scheme_prefix_size{6};
+		std::string authorization{iter->value().substr(pos + basic_auth_scheme_prefix_size)};
+		boost::trim(authorization);
+		log::debug("{}: Authorization value (trimmed): [{}]", fn, authorization);
+
+		constexpr auto max_creds_size{128};
+		unsigned long size = max_creds_size;
+		//std::vector<std::uint8_t> creds(size);
+		std::array<std::uint8_t, max_creds_size> creds{};
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		const auto ec{irods::base64_decode(
+				reinterpret_cast<unsigned char*>(authorization.data()), authorization.size(), creds.data(), &size)};
+		log::debug("{}: base64 - error code=[{}], decoded size=[{}]", fn, ec, size);
+
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		std::string_view sv{reinterpret_cast<char*>(creds.data()), size};
+		log::debug("{}: base64 decode credentials = [{}]", fn, sv); // TODO Don't print the password
+
+		const auto colon{sv.find(':')};
+		if (colon == std::string_view::npos) {
+			return _sess_ptr->send(fail(status_type::unauthorized));
+		}
+
+		std::string username{sv.substr(0, colon)};
+		std::string password{sv.substr(colon + 1)};
+	}
+
 	auto authentication(session_pointer_type _sess_ptr, request_type& _req) -> void
 	{
 		if (_req.method() == boost::beast::http::verb::get) {
@@ -283,8 +308,8 @@ namespace irods::http::handler
 		else if (_req.method() == boost::beast::http::verb::post) {
 			irods::http::globals::background_task([fn = __func__, _sess_ptr, _req = std::move(_req)] {
 				// Right, we're kinda being a proxy, so how about proxy-authorization?
-				const auto& hdrs = _req.base();
-				const auto iter = hdrs.find("authorization");
+				const auto& hdrs{_req.base()};
+				const auto iter{hdrs.find("authorization")};
 
 				// Failed to find auth header, use OIDC auth_code flow instead
 				if (iter == std::end(hdrs)) {
@@ -344,11 +369,12 @@ namespace irods::http::handler
 						"{}: username=[{}], password=[{}]", fn, username, password); // TODO Don't print the password
 
 					// BEGIN OG OAUTH THING
-					BodyArguments args{{"client_id", irods::http::globals::oidc_configuration()->at("client_id").get_ref<const std::string&>()},
-									   {"grant_type", "password"},
-									   {"scope", "openid"},
-									   {"username", username},
-									   {"password", password}};
+					BodyArguments args{
+						{"client_id", irods::http::globals::oidc_configuration()->at("client_id").get_ref<const std::string&>()},
+						{"grant_type", "password"},
+						{"scope", "openid"},
+						{"username", username},
+						{"password", password}};
 
 					// Query endpoint
 					nlohmann::json res_item{hit_token_endpoint(encode_body(args))};
