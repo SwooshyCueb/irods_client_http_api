@@ -135,7 +135,7 @@ namespace irods::http::handler
 		CURL* curl{curl_easy_init()};
 
 		// Ensure that CURL was successfully enabled
-		[[likely]] if (curl != nullptr)
+		if (curl != nullptr)
 		{
 			// Encode the data & ensure success
 			char* tmp_encoded_data{curl_easy_escape(curl, to_encode.data(), to_encode.size())};
