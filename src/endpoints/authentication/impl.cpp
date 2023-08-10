@@ -18,10 +18,13 @@
 #include <boost/beast.hpp>
 #include <boost/beast/http.hpp>
 
+#include <iterator>
 #include <nlohmann/json.hpp>
 
 #include <jwt-cpp/jwt.h>
 #include <jwt-cpp/traits/nlohmann-json/traits.h>
+
+#include <fmt/core.h>
 
 #include <curl/curl.h>
 #include <curl/urlapi.h>
@@ -195,20 +198,65 @@ namespace irods::http::handler
 				                                       _sess_ptr,
 				                                       _req = std::move(_req),
 				                                       url = std::move(url)] {
-					// Two query params requiured by OAuth 2.0
-					// TODO: Double check with OIDC for bonus params
-					const auto code_iter{url.query.find("code")};
+					// Will always be in response, as we always send it out
 					const auto state_iter{url.query.find("state")};
 
-					// Check to see if querys are valid
-					if (state_iter == std::end(url.query) || code_iter == std::end(url.query)) {
+					// Invalid/Fake request... Should have state query param
+					if (state_iter == std::end(url.query)) {
+						log::warn(
+							"{}: Received an Authorization response with no 'state' query parameter. Ignoring.", fn);
 						return _sess_ptr->send(fail(status_type::bad_request));
 					}
 
-					// Code here...
-					// Verify the state here!!!
-					log::debug("{}: Code is [{}]", fn, code_iter->second);
-					log::debug("{}: State is [{}]", fn, state_iter->second);
+					auto is_state_valid{[](std::string_view in_state) { return in_state.compare("placeholder") == 0; }};
+
+					// The state is invalid (i.e. doesn't exist, or have been used)
+					if (!is_state_valid(state_iter->second)) {
+						log::warn(
+							"{}: Received an Authorization response with an invalid 'state' query parameter. Ignoring.",
+							fn);
+						return _sess_ptr->send(fail(status_type::bad_request));
+					}
+
+					// Will only be available if authorization was successful
+					const auto code_iter{url.query.find("code")};
+
+					// Code does not exist, process response for error details...
+					if (code_iter == std::end(url.query)) {
+						const auto error_iter{url.query.find("error")};
+
+						// Required error parameter missing, malformed response
+						if (error_iter == std::end(url.query)) {
+							log::warn(
+								"{}: Received an Authorization response with no 'code' or 'error' query parameters. "
+							    "Ignoring.",
+								fn);
+							return _sess_ptr->send(fail(status_type::bad_request));
+						}
+						std::string responses;
+
+						auto responses_iter{fmt::format_to(
+							std::back_inserter(responses), "{}: Error Code [{}]", fn, error_iter->second)};
+
+						// Optional OAuth 2.0 error paramters follows
+						const auto error_description_iter{url.query.find("error_description")};
+						if (error_description_iter != std::end(url.query)) {
+							responses_iter = fmt::format_to(
+								responses_iter, ", Error Description [{}]", error_description_iter->second);
+						}
+
+						const auto error_uri_iter{url.query.find("error_uri")};
+						if (error_uri_iter != std::end(url.query)) {
+							responses_iter = fmt::format_to(responses_iter, ", Error URI [{}]", error_uri_iter->second);
+						}
+
+						log::warn(responses);
+
+						return _sess_ptr->send(fail(status_type::bad_request));
+					}
+
+					// We have a (possibly) valid code, and a valid state!
+					// We can attempt to retrieve a token!
 
 					// Populate arguments
 					body_arguments args{
