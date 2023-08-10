@@ -175,35 +175,6 @@ namespace irods::http::handler
 			irods::http::globals::oidc_configuration().at("redirect_uri").get_ref<const std::string&>());
 	}
 
-	// auto decode_username_and_password()
-	// {
-	// 	constexpr auto basic_auth_scheme_prefix_size{6};
-	// 	std::string authorization{iter->value().substr(pos + basic_auth_scheme_prefix_size)};
-	// 	boost::trim(authorization);
-	// 	log::debug("{}: Authorization value (trimmed): [{}]", fn, authorization);
-
-	// 	constexpr auto max_creds_size{128};
-	// 	unsigned long size = max_creds_size;
-	// 	//std::vector<std::uint8_t> creds(size);
-	// 	std::array<std::uint8_t, max_creds_size> creds{};
-	// 	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-	// 	const auto ec{irods::base64_decode(
-	// 			reinterpret_cast<unsigned char*>(authorization.data()), authorization.size(), creds.data(), &size)};
-	// 	log::debug("{}: base64 - error code=[{}], decoded size=[{}]", fn, ec, size);
-
-	// 	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-	// 	std::string_view sv{reinterpret_cast<char*>(creds.data()), size};
-	// 	log::debug("{}: base64 decode credentials = [{}]", fn, sv); // TODO Don't print the password
-
-	// 	const auto colon{sv.find(':')};
-	// 	if (colon == std::string_view::npos) {
-	// 		return _sess_ptr->send(fail(status_type::unauthorized));
-	// 	}
-
-	// 	std::string username{sv.substr(0, colon)};
-	// 	std::string password{sv.substr(colon + 1)};
-	// }
-
 	auto authentication(session_pointer_type _sess_ptr, request_type& _req) -> void
 	{
 		if (_req.method() == boost::beast::http::verb::get) {
@@ -500,20 +471,6 @@ namespace irods::http::handler
 						username,
 						e.what());
 				}
-				// try {
-				// 	const auto& svr = irods::http::globals::configuration().at("irods_client");
-				// 	const auto& host = svr.at("host").get_ref<const std::string&>();
-				// 	const auto port = svr.at("port").get<std::uint16_t>();
-				// 	const auto& zone = svr.at("zone").get_ref<const std::string&>();
-
-				// 	irods::experimental::client_connection conn{
-				// 		irods::experimental::defer_authentication, host, port, {username, zone}};
-
-				// 	login_successful = (clientLoginWithPassword(static_cast<RcComm*>(conn), password.data()) == 0);
-				// }
-				// catch (const irods::exception& e) {
-				// 	log::error(e.client_display_what());
-				// }
 
 				if (!login_successful) {
 					return _sess_ptr->send(fail(status_type::unauthorized));
