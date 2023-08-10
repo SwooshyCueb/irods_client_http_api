@@ -93,6 +93,24 @@ Notice how some of the configuration values are wrapped in angle brackets (e.g. 
                 // The amount of time before a user's "Basic" authentication
                 // token expires.
                 "timeout_in_seconds": 3600
+            },
+
+            // Defines required OIDC related configuration
+            "oicd": {
+                // The ip address or hostname of the OIDC provider
+                "config_host": "oidc.example.com",
+
+                // The port the OIDC provider is listening on
+                "port": "8080",
+
+                // The path to the OIDC well-known endpoint
+                "uri": "/realms/example/.well-known/openid-configuration",
+
+                // The client id associated with the application given by the OIDC provider
+                "client_id": "irods_http",
+
+                // URI pointing to the irods HTTP API auth endpoint
+                "redirect_uri": "https://rods.example.com/irods-http/0.9.5/authenticate"
             }
         },
 
