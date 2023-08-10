@@ -234,6 +234,7 @@ namespace irods::http::handler
 							return _sess_ptr->send(fail(status_type::bad_request));
 						}
 						std::string responses;
+						responses.reserve(500);
 
 						auto responses_iter{fmt::format_to(
 							std::back_inserter(responses), "{}: Error Code [{}]", fn, error_iter->second)};
