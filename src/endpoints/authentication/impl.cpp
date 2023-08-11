@@ -132,36 +132,10 @@ namespace irods::http::handler
 		return nlohmann::json::parse(res.body());
 	}
 
-	auto encode_string(std::string_view _to_encode) -> std::string
-	{
-		// Init CURL
-		CURL* curl{curl_easy_init()};
-
-		// Ensure that CURL was successfully enabled
-		if (curl != nullptr) {
-			// Encode the data & ensure success
-			char* tmp_encoded_data{curl_easy_escape(curl, _to_encode.data(), _to_encode.size())};
-			if (tmp_encoded_data == nullptr) {
-				log::debug("{}: Error encoding the redirect uri!!!", __func__);
-			}
-
-			// Save the data
-			std::string encoded_data{tmp_encoded_data};
-
-			// Clean up CURL
-			curl_free(tmp_encoded_data);
-			curl_easy_cleanup(curl);
-			return encoded_data;
-		}
-
-		// Return Result
-		return "";
-	}
-
 	auto encode_body(const body_arguments& _args) -> std::string
 	{
 		auto encode_pair{
-			[](const body_arguments::value_type& i) { return fmt::format("{}={}", encode_string(i.first), encode_string(i.second)); }};
+			[](const body_arguments::value_type& i) { return fmt::format("{}={}", irods::http::encode(i.first), irods::http::encode(i.second)); }};
 
 		return std::transform_reduce(
 			std::next(std::cbegin(_args)),
@@ -173,7 +147,7 @@ namespace irods::http::handler
 
 	auto get_encoded_redirect_uri() -> std::string
 	{
-		return encode_string(
+		return irods::http::encode(
 			irods::http::globals::oidc_configuration().at("redirect_uri").get_ref<const std::string&>());
 	}
 
