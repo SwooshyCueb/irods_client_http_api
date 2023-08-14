@@ -454,7 +454,7 @@ auto main(int _argc, char* _argv[]) -> int
             endpoint_config = json::parse(res.body());
 			irods::http::globals::set_oidc_endpoint_configuration(endpoint_config);
 
-            // Close teh socket
+            // Close the socket
             beast::error_code ec;
             tcp_stream.socket().shutdown(net::ip::tcp::socket::shutdown_both, ec);
         } catch (const json::out_of_range& e) {

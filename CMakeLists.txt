@@ -39,7 +39,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 include(${IRODS_TARGETS_PATH})
 include(GNUInstallDirs)
 include(UseLibCXX)
-    
+
 if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build {Debug, Release}." FORCE)
   message(STATUS "Setting unspecified CMAKE_BUILD_TYPE to '${CMAKE_BUILD_TYPE}'. This is the correct setting for normal builds.")
