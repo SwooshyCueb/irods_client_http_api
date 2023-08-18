@@ -95,21 +95,21 @@ Notice how some of the configuration values are wrapped in angle brackets (e.g. 
                 "timeout_in_seconds": 3600
             },
 
-            // Defines required OIDC related configuration
-            "oicd": {
-                // The ip address or hostname of the OIDC provider
+            // Defines required OIDC related configuration.
+            "oidc": {
+                // The hostname or ip address of the OIDC provider.
                 "config_host": "oidc.example.com",
 
-                // The port the OIDC provider is listening on
+                // The port the OIDC provider is listening on.
                 "port": "8080",
 
-                // The path to the OIDC well-known endpoint
+                // The path to the OIDC well-known endpoint.
                 "uri": "/realms/example/.well-known/openid-configuration",
 
-                // The client id associated with the application given by the OIDC provider
+                // The client id associated with the application given by the OIDC provider.
                 "client_id": "irods_http",
 
-                // URI pointing to the irods HTTP API auth endpoint
+                // URI pointing to the irods HTTP API auth endpoint.
                 "redirect_uri": "https://rods.example.com/irods-http/0.9.5/authenticate"
             }
         },
