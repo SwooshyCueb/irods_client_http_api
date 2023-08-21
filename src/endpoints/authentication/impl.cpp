@@ -6,7 +6,6 @@
 #include "session.hpp"
 #include "version.hpp"
 
-#include <curl/urlapi.h>
 #include <irods/base64.hpp>
 #include <irods/check_auth_credentials.h>
 #include <irods/irods_exception.hpp>
@@ -25,15 +24,15 @@
 #include <jwt-cpp/traits/nlohmann-json/traits.h>
 
 #include <curl/curl.h>
+#include <curl/urlapi.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <string>
 #include <string_view>
-#include <vector>
-
 #include <unordered_map>
-#include <algorithm>
+#include <vector>
 
 // clang-format off
 namespace beast = boost::beast; // from <boost/beast.hpp>
