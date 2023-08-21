@@ -98,19 +98,19 @@ Notice how some of the configuration values are wrapped in angle brackets (e.g. 
             // Defines required OIDC related configuration.
             "oidc": {
                 // The hostname or ip address of the OIDC provider.
-                "config_host": "oidc.example.com",
+                "config_host": "oidc.example.org",
 
                 // The port the OIDC provider is listening on.
-                "port": "8080",
+                "port": 8080,
 
-                // The path to the OIDC well-known endpoint.
-                "uri": "/realms/example/.well-known/openid-configuration",
+                // Well known endpoint to retrieve configuration of OIDC provider.
+                "well_known_uri": "/realms/example",
 
-                // The client id associated with the application given by the OIDC provider.
-                "client_id": "irods_http",
+                // The client id given to the application by OIDC provider.
+                "client_id": "irods_http_api",
 
                 // URI pointing to the irods HTTP API auth endpoint.
-                "redirect_uri": "https://rods.example.com/irods-http/0.9.5/authenticate"
+                "redirect_uri": "https://<domain>/irods-http/0.1.0/authenticate"
             }
         },
 
