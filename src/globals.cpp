@@ -25,26 +25,6 @@ namespace
 
 namespace irods::http::globals
 {
-	auto set_oidc_endpoint_configuration(const nlohmann::json& _config) -> void
-    {
-        g_oidc_endpoints = &_config;
-    } // set_oidc_endpoint_configuration
-
-    auto oidc_endpoint_configuration() -> const nlohmann::json&
-    {
-        return *g_oidc_endpoints;
-    } // oidc_endpoint_configuration
-
-	auto set_oidc_configuration(const nlohmann::json& _config) -> void
-    {
-        g_oidc_config = &_config;
-    } // set_oidc_configuration
-
-    auto oidc_configuration() -> const nlohmann::json&
-    {
-        return *g_oidc_config;
-    } // oidc_configuration
-
     auto set_configuration(const nlohmann::json& _config) -> void
     {
         g_config = &_config;
@@ -95,4 +75,24 @@ namespace irods::http::globals
     {
         return *g_conn_pool;
     } // connection_pool
+
+	auto set_oidc_endpoint_configuration(const nlohmann::json& _config) -> void
+    {
+        g_oidc_endpoints = &_config;
+    } // set_oidc_endpoint_configuration
+
+    auto oidc_endpoint_configuration() -> const nlohmann::json&
+    {
+        return *g_oidc_endpoints;
+    } // oidc_endpoint_configuration
+
+	auto set_oidc_configuration(const nlohmann::json& _config) -> void
+    {
+        g_oidc_config = &_config;
+    } // set_oidc_configuration
+
+    auto oidc_configuration() -> const nlohmann::json&
+    {
+        return *g_oidc_config;
+    } // oidc_configuration
 } // namespace irods::http::globals
