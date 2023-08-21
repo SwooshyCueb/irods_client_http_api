@@ -39,14 +39,14 @@ namespace beast = boost::beast; // from <boost/beast.hpp>
 namespace net   = boost::asio;  // from <boost/asio.hpp>
 // clang-format on
 
-using BodyArguments = std::unordered_map<std::string, std::string>;
+using body_arguments = std::unordered_map<std::string, std::string>;
 
 namespace irods::http::handler
 {
-	auto hit_token_endpoint(std::string encoded_body) -> nlohmann::json
+	auto hit_token_endpoint(std::string _encoded_body) -> nlohmann::json
 	{
 		const auto token_endpoint{
-			irods::http::globals::oidc_endpoint_configuration().at("token_endpoint").get<const std::string>()};
+			irods::http::globals::oidc_endpoint_configuration().at("token_endpoint").get_ref<const std::string&>()};
 
 		// Setup net
 		net::io_context io_ctx;
@@ -55,9 +55,12 @@ namespace irods::http::handler
 
 		// Setup curl
 		CURLU* endpoint{curl_url()};
+		if (endpoint == nullptr) {
+			log::debug("???");
+		}
 
 		// Parse url
-		CURLUcode rc{curl_url_set(endpoint, CURLUPART_URL, token_endpoint.data(), 0)};
+		CURLUcode rc{curl_url_set(endpoint, CURLUPART_URL, token_endpoint.c_str(), 0)};
 		if (rc != 0) {
 			log::debug("Something happend....");
 		}
@@ -76,7 +79,7 @@ namespace irods::http::handler
 		//    log::debug("Something happend....");
 		//}
 		// KEYCLOAK does not return the port?
-		const auto port{irods::http::globals::oidc_configuration().at("port").get<const std::string>()};
+		const auto port{std::to_string(irods::http::globals::oidc_configuration().at("port").get<int>())};
 
 		// Get path
 		char* path{};
@@ -95,12 +98,12 @@ namespace irods::http::handler
 		constexpr auto version_number{11};
 		beast::http::request<beast::http::string_body> req{beast::http::verb::post, path, version_number};
 		req.set(beast::http::field::host, host);
-		req.set(beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+		req.set(beast::http::field::user_agent, irods::http::version::server_name);
 		req.set(beast::http::field::content_type,
 		        "application/x-www-form-urlencoded"); // Possibly set a diff way?
 
 		// Send
-		req.body() = encoded_body;
+		req.body() = std::move(_encoded_body);
 		req.prepare_payload();
 
 		// Send request
@@ -129,7 +132,7 @@ namespace irods::http::handler
 		return nlohmann::json::parse(res.body());
 	}
 
-	auto encode_string(std::string_view to_encode) -> std::string
+	auto encode_string(std::string_view _to_encode) -> std::string
 	{
 		// Init CURL
 		CURL* curl{curl_easy_init()};
@@ -137,7 +140,7 @@ namespace irods::http::handler
 		// Ensure that CURL was successfully enabled
 		if (curl != nullptr) {
 			// Encode the data & ensure success
-			char* tmp_encoded_data{curl_easy_escape(curl, to_encode.data(), to_encode.size())};
+			char* tmp_encoded_data{curl_easy_escape(curl, _to_encode.data(), _to_encode.size())};
 			if (tmp_encoded_data == nullptr) {
 				log::debug("{}: Error encoding the redirect uri!!!", __func__);
 			}
@@ -155,16 +158,16 @@ namespace irods::http::handler
 		return "";
 	}
 
-	auto encode_body(BodyArguments args) -> std::string
+	auto encode_body(const body_arguments& _args) -> std::string
 	{
 		auto encode_pair{
-			[](const BodyArguments::value_type& i) { return encode_string(i.first) + "=" + encode_string(i.second); }};
+			[](const body_arguments::value_type& i) { return fmt::format("{}={}", encode_string(i.first), encode_string(i.second)); }};
 
 		return std::transform_reduce(
-			std::next(std::begin(args)),
-			std::end(args),
-			encode_pair(*std::begin(args)),
-			[](auto a, auto b) { return a + "?" + b; },
+			std::next(std::cbegin(_args)),
+			std::cend(_args),
+			encode_pair(*std::cbegin(_args)),
+			[](const auto& a, const auto& b) { return fmt::format("{}?{}", a, b); },
 			encode_pair);
 	}
 
@@ -174,7 +177,7 @@ namespace irods::http::handler
 			irods::http::globals::oidc_configuration().at("redirect_uri").get_ref<const std::string&>());
 	}
 
-	auto authentication(session_pointer_type _sess_ptr, request_type& _req) -> void
+	IRODS_HTTP_API_ENDPOINT_ENTRY_FUNCTION_SIGNATURE(authentication)
 	{
 		if (_req.method() == boost::beast::http::verb::get) {
 			url url;
@@ -188,7 +191,7 @@ namespace irods::http::handler
 
 			if (did_except) {
 				irods::http::globals::background_task([fn = __func__, _sess_ptr, _req = std::move(_req)] {
-					BodyArguments args{
+					body_arguments args{
 						{"client_id",
 					     irods::http::globals::oidc_configuration().at("client_id").get_ref<const std::string&>()},
 						{"response_type", "code"},
@@ -200,13 +203,13 @@ namespace irods::http::handler
 					const auto auth_endpoint{irods::http::globals::oidc_endpoint_configuration()
 					                             .at("authorization_endpoint")
 					                             .get_ref<const std::string&>()};
-					const auto yep{fmt::format("{}?{}", auth_endpoint, encode_body(args))};
+					const auto encoded_url{fmt::format("{}?{}", auth_endpoint, encode_body(args))};
 
-					log::debug("{}: Proper redirect to [{}]", fn, yep);
+					log::debug("{}: Proper redirect to [{}]", fn, encoded_url);
 
 					response_type res{status_type::found, _req.version()};
-					res.set(field_type::server, BOOST_BEAST_VERSION_STRING);
-					res.set(field_type::location, yep);
+					res.set(field_type::server, irods::http::version::server_name);
+					res.set(field_type::location, encoded_url);
 					res.keep_alive(_req.keep_alive());
 					res.prepare_payload();
 
@@ -234,7 +237,7 @@ namespace irods::http::handler
 					log::debug("{}: State is [{}]", fn, state_iter->second);
 
 					// Populate arguments
-					BodyArguments args{
+					body_arguments args{
 						{"grant_type", "authorization_code"},
 						{"client_id",
 					     irods::http::globals::oidc_configuration().at("client_id").get_ref<const std::string&>()},
@@ -250,8 +253,7 @@ namespace irods::http::handler
 
 					// Get OIDC token && feed to JWT parser
 					// TODO: Handle case where we throw!!!
-					auto decoded_token{
-						jwt::decode<jwt::traits::nlohmann_json>(res_item.at("id_token").get_ref<const std::string&>())};
+					auto decoded_token{jwt::decode<jwt::traits::nlohmann_json>(jwt_token)};
 
 					// Get irods username
 					const std::string irods_name{
@@ -269,7 +271,7 @@ namespace irods::http::handler
 						.expires_at = std::chrono::steady_clock::now() + std::chrono::seconds{seconds}});
 
 					response_type res_rep{status_type::ok, _req.version()};
-					res_rep.set(field_type::server, BOOST_BEAST_VERSION_STRING);
+					res_rep.set(field_type::server, irods::http::version::server_name);
 					res_rep.set(field_type::content_type, "text/plain");
 					res_rep.keep_alive(_req.keep_alive());
 					res_rep.body() = std::move(bearer_token);
@@ -344,7 +346,7 @@ namespace irods::http::handler
 						"{}: username=[{}], password=[{}]", fn, username, password); // TODO Don't print the password
 
 					// BEGIN OG OAUTH THING
-					BodyArguments args{
+					body_arguments args{
 						{"client_id",
 					     irods::http::globals::oidc_configuration().at("client_id").get_ref<const std::string&>()},
 						{"grant_type", "password"},
@@ -378,7 +380,7 @@ namespace irods::http::handler
 						.expires_at = std::chrono::steady_clock::now() + std::chrono::seconds{seconds}});
 
 					response_type res_rep{status_type::ok, _req.version()};
-					res_rep.set(field_type::server, BOOST_BEAST_VERSION_STRING);
+					res_rep.set(field_type::server, irods::http::version::server_name);
 					res_rep.set(field_type::content_type, "text/plain");
 					res_rep.keep_alive(_req.keep_alive());
 					res_rep.body() = std::move(bearer_token);
@@ -486,7 +488,7 @@ namespace irods::http::handler
 					.expires_at = std::chrono::steady_clock::now() + std::chrono::seconds{seconds}});
 
 				response_type res{status_type::ok, _req.version()};
-				res.set(field_type::server, BOOST_BEAST_VERSION_STRING);
+				res.set(field_type::server, irods::http::version::server_name);
 				res.set(field_type::content_type, "text/plain");
 				res.keep_alive(_req.keep_alive());
 				res.body() = std::move(bearer_token);
