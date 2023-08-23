@@ -246,10 +246,10 @@ namespace irods::http::handler
 					     irods::http::globals::oidc_configuration().at("redirect_uri").get_ref<const std::string&>()}};
 
 					// Encode the string, hit endpoint, get res
-					nlohmann::json oicd_response{hit_token_endpoint(encode_body(args))};
+					nlohmann::json oidc_response{hit_token_endpoint(encode_body(args))};
 
 					// Assume passed, get oidc token
-					const std::string jwt_token{oicd_response.at("id_token").get_ref<const std::string&>()};
+					const std::string jwt_token{oidc_response.at("id_token").get_ref<const std::string&>()};
 
 					// Get OIDC token && feed to JWT parser
 					// TODO: Handle case where we throw!!!
@@ -355,10 +355,10 @@ namespace irods::http::handler
 						{"password", password}};
 
 					// Query endpoint
-					nlohmann::json oicd_response{hit_token_endpoint(encode_body(args))};
+					nlohmann::json oidc_response{hit_token_endpoint(encode_body(args))};
 
 					// Assume passed, get oidc token
-					const std::string jwt_token{oicd_response.at("id_token").get<const std::string>()};
+					const std::string jwt_token{oidc_response.at("id_token").get<const std::string>()};
 
 					// Feed to JWT parser
 					auto decoded_token{jwt::decode<jwt::traits::nlohmann_json>(jwt_token)};
