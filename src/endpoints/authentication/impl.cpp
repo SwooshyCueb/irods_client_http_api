@@ -239,7 +239,7 @@ namespace irods::http::handler
 						auto responses_iter{fmt::format_to(
 							std::back_inserter(responses), "{}: Error Code [{}]", fn, error_iter->second)};
 
-						// Optional OAuth 2.0 error paramters follows
+						// Optional OAuth 2.0 error parameters follow
 						const auto error_description_iter{url.query.find("error_description")};
 						if (error_description_iter != std::end(url.query)) {
 							responses_iter = fmt::format_to(
@@ -271,7 +271,28 @@ namespace irods::http::handler
 					// Encode the string, hit endpoint, get res
 					nlohmann::json oidc_response{hit_token_endpoint(encode_body(args))};
 
-					// Assume passed, get oidc token
+					// Determine if we have an "error" json...
+					if (auto error{oidc_response.find("error")}; error != std::end(oidc_response)) {
+						std::string token_error_log;
+						token_error_log.reserve(500);
+
+						auto error_log_itter{fmt::format_to(std::back_inserter(token_error_log), "{}: Token request failed! Error: [{}]", fn, *error)};
+
+						// Optional OAuth 2.0 error parameters follow
+						if (auto error_description{oidc_response.find("error_description")}; error_description != std::end(oidc_response)) {
+							error_log_itter = fmt::format_to(error_log_itter, ", Error Description [{}]", *error_description);
+						}
+
+						if (auto error_uri{oidc_response.find("error_uri")}; error_uri != std::end(oidc_response)) {
+							error_log_itter = fmt::format_to(error_log_itter, ", Error URI [{}]", *error_uri);
+						}
+
+						log::warn(token_error_log);
+						return _sess_ptr->send(fail(status_type::bad_request));
+					}
+
+					// Not an error, likely to have id_token
+					// TODO: Consider handling bit flip cases
 					const std::string jwt_token{oidc_response.at("id_token").get_ref<const std::string&>()};
 
 					// Get OIDC token && feed to JWT parser
