@@ -64,11 +64,11 @@ namespace irods::http
         return result;
     } // decode
 
-	auto encode(std::string_view to_encode) -> std::string
+	auto encode(std::string_view _to_encode) -> std::string
 	{
-		char* tmp_encoded_data{curl_easy_escape(nullptr, to_encode.data(), to_encode.size())};
+		char* tmp_encoded_data{curl_easy_escape(nullptr, _to_encode.data(), _to_encode.size())};
 		if (tmp_encoded_data == nullptr) {
-			return {std::cbegin(to_encode), std::cend(to_encode)};
+			return {std::cbegin(_to_encode), std::cend(_to_encode)};
 		}
 
 		std::string encoded_data{tmp_encoded_data};

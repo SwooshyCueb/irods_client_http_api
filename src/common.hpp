@@ -78,7 +78,7 @@ namespace irods::http
 
     auto decode(const std::string_view _v) -> std::string;
 
-	auto encode(std::string_view to_encode) -> std::string;
+	auto encode(std::string_view _to_encode) -> std::string;
 
     // TODO Create a better name.
     auto to_argument_list(const std::string_view _urlencoded_string) -> std::unordered_map<std::string, std::string>;
