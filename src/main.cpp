@@ -5,7 +5,6 @@
 #include "session.hpp"
 #include "version.hpp"
 
-#include <boost/beast/core/flat_buffer.hpp>
 #include <irods/connection_pool.hpp>
 #include <irods/irods_configuration_keywords.hpp>
 #include <irods/process_stash.hpp>
@@ -16,6 +15,7 @@
 //#include <curl/curl.h>
 
 #include <boost/beast/core.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 //#include <boost/asio/dispatch.hpp>
@@ -405,6 +405,7 @@ auto main(int _argc, char* _argv[]) -> int
         spdlog::set_pattern("[%Y-%m-%d %T.%e] [P:%P] [%^%l%$] [T:%t] %v");
 
         log::info("Initializing server.");
+
         // Confirm OIDC endpoint is valid (Assume all provide endpoint)
         log::trace("Verifing OIDC endpoint configuration");
 
@@ -437,7 +438,7 @@ auto main(int _argc, char* _argv[]) -> int
             constexpr auto version_number{11};
             beast::http::request<beast::http::string_body> req{beast::http::verb::get, uri, version_number};
             req.set(beast::http::field::host, host);
-            req.set(beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+            req.set(beast::http::field::user_agent, irods::http::version::server_name);
 
             // Send request
             beast::http::write(tcp_stream, req);
