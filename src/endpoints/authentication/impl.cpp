@@ -154,6 +154,30 @@ namespace irods::http::handler
 			irods::http::globals::oidc_configuration().at("redirect_uri").get_ref<const std::string&>());
 	}
 
+	auto is_error_response(const nlohmann::json& _response_to_check) -> bool
+	{
+		if (const auto error{_response_to_check.find("error")}; error != std::cend(_response_to_check)) {
+			std::string token_error_log;
+			token_error_log.reserve(500);
+
+			auto error_log_itter{fmt::format_to(std::back_inserter(token_error_log), "{}: Token request failed! Error: [{}]", __func__, *error)};
+
+			// Optional OAuth 2.0 error parameters follow
+			if (const auto error_description{_response_to_check.find("error_description")}; error_description != std::cend(_response_to_check)) {
+				error_log_itter = fmt::format_to(error_log_itter, ", Error Description [{}]", *error_description);
+			}
+
+			if (const auto error_uri{_response_to_check.find("error_uri")}; error_uri != std::cend(_response_to_check)) {
+				error_log_itter = fmt::format_to(error_log_itter, ", Error URI [{}]", *error_uri);
+			}
+
+			log::warn(token_error_log);
+			return true;
+		}
+
+		return false;
+	}
+
 	IRODS_HTTP_API_ENDPOINT_ENTRY_FUNCTION_SIGNATURE(authentication)
 	{
 		if (_req.method() == boost::beast::http::verb::get) {
@@ -272,22 +296,7 @@ namespace irods::http::handler
 					nlohmann::json oidc_response{hit_token_endpoint(encode_body(args))};
 
 					// Determine if we have an "error" json...
-					if (auto error{oidc_response.find("error")}; error != std::end(oidc_response)) {
-						std::string token_error_log;
-						token_error_log.reserve(500);
-
-						auto error_log_itter{fmt::format_to(std::back_inserter(token_error_log), "{}: Token request failed! Error: [{}]", fn, *error)};
-
-						// Optional OAuth 2.0 error parameters follow
-						if (auto error_description{oidc_response.find("error_description")}; error_description != std::end(oidc_response)) {
-							error_log_itter = fmt::format_to(error_log_itter, ", Error Description [{}]", *error_description);
-						}
-
-						if (auto error_uri{oidc_response.find("error_uri")}; error_uri != std::end(oidc_response)) {
-							error_log_itter = fmt::format_to(error_log_itter, ", Error URI [{}]", *error_uri);
-						}
-
-						log::warn(token_error_log);
+					if (is_error_response(oidc_response)) {
 						return _sess_ptr->send(fail(status_type::bad_request));
 					}
 
@@ -400,6 +409,11 @@ namespace irods::http::handler
 
 					// Query endpoint
 					nlohmann::json oidc_response{hit_token_endpoint(encode_body(args))};
+
+					// Determine if we have an "error" json...
+					if (is_error_response(oidc_response)) {
+						return _sess_ptr->send(fail(status_type::bad_request));
+					}
 
 					// Assume passed, get oidc token
 					const std::string jwt_token{oidc_response.at("id_token").get<const std::string>()};
