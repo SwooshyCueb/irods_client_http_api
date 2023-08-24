@@ -148,12 +148,6 @@ namespace irods::http::handler
 			encode_pair);
 	}
 
-	auto get_encoded_redirect_uri() -> std::string
-	{
-		return irods::http::encode(
-			irods::http::globals::oidc_configuration().at("redirect_uri").get_ref<const std::string&>());
-	}
-
 	auto is_error_response(const nlohmann::json& _response_to_check) -> bool
 	{
 		if (const auto error{_response_to_check.find("error")}; error != std::cend(_response_to_check)) {
