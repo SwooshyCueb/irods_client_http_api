@@ -6,6 +6,8 @@ cmake_minimum_required(VERSION 3.18.0 FATAL_ERROR)
 
 find_package(IRODS REQUIRED CONFIG)
 
+include(RequireOutOfSourceBuild)
+
 set(IRODS_HTTP_API_BINARY_NAME "irods_http_api")
 
 set(IRODS_CLIENT_VERSION "0.1.0")
@@ -13,9 +15,10 @@ set(IRODS_HTTP_API_VERSION "${IRODS_CLIENT_VERSION}")
 
 set(IRODS_PACKAGE_REVISION "1")
 
-include(RequireOutOfSourceBuild)
-include(IrodsCXXCompiler)
+include(IrodsExternals)
+IRODS_MACRO_CHECK_DEPENDENCY_SET_FULLPATH(JWTCPP jwt-cpp0.6.99.0-0)
 
+include(IrodsCXXCompiler)
 set(CMAKE_CXX_STANDARD ${IRODS_CXX_STANDARD})
 set(CMAKE_CXX_EXTENSIONS OFF)
 # export-dynamic so stacktrace entries from executables have function names.
@@ -48,16 +51,9 @@ endif()
 find_package(CURL REQUIRED)
 find_package(nlohmann_json "3.6.1" REQUIRED)
 find_package(OpenSSL REQUIRED COMPONENTS Crypto SSL)
-
-# Include jwt library to handle OIDC JWT responses containing user information
-include(FetchContent)
-FetchContent_Declare(
-  jwt
-  GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git
-  GIT_TAG        aca3217a3e0d78979e3c906aed20170971eb8c98 # 0.7.0-rc.0
-)
-
-FetchContent_MakeAvailable(jwt)
+# jwt library to handle OIDC JWT responses containing user information
+find_package(jwt-cpp REQUIRED
+  HINTS "${IRODS_EXTERNALS_FULLPATH_JWTCPP}")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fpermissive>)
